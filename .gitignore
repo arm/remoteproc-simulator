@@ -1,0 +1,5 @@
+# goreleaser
+dist/
+
+# dev build artifact
+remoteproc-simulator
