@@ -2,4 +2,4 @@
 dist/
 
 # dev build artifact
-./remoteproc-simulator
+/remoteproc-simulator
