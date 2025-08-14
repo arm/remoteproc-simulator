@@ -90,7 +90,6 @@ func TestRunningFirmware(t *testing.T) {
 
 		requireState(t, deviceDir, "offline")
 	})
-
 }
 
 func assertFileContent(t assert.TestingT, path string, wantContent string) {
