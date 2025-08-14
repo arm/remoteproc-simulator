@@ -136,7 +136,7 @@ func (r *RemoteProc) handleStateChange(value string) {
 		}
 
 		if !fileExists(filepath.Join(r.firmwareDir, r.firmware)) {
-			log.Printf("Cannot start: firmware file does not exist")
+			log.Printf("Cannot start: firmware file not found in %s directory", r.firmwareDir)
 			r.setState(r.state)
 			return
 		}
