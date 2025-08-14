@@ -11,11 +11,12 @@ import (
 )
 
 type RemoteProc struct {
-	deviceDir string
-	watcher   *dirwatcher.DirWatcher
-	state     State
-	firmware  string
-	stopChan  chan struct{}
+	deviceDir   string
+	firmwareDir string
+	watcher     *dirwatcher.DirWatcher
+	state       State
+	firmware    string
+	stopChan    chan struct{}
 }
 
 const (
@@ -27,18 +28,20 @@ const (
 )
 
 func New(
-	sysRoot string,
+	root string,
 	deviceIndex uint,
 	deviceName string,
 ) (*RemoteProc, error) {
 	deviceDirName := fmt.Sprintf("remoteproc%d", deviceIndex)
-	deviceDir := filepath.Join(sysRoot, "class", "remoteproc", deviceDirName)
+	deviceDir := filepath.Join(root, "sys", "class", "remoteproc", deviceDirName)
+	firmwareDir := filepath.Join(root, "lib", "firmware")
 
 	r := &RemoteProc{
-		deviceDir: deviceDir,
-		firmware:  initialFirmware,
-		state:     initialState,
-		stopChan:  make(chan struct{}),
+		deviceDir:   deviceDir,
+		firmwareDir: firmwareDir,
+		firmware:    initialFirmware,
+		state:       initialState,
+		stopChan:    make(chan struct{}),
 	}
 
 	files := map[string]string{
@@ -46,8 +49,12 @@ func New(
 		firmwareFileName:   r.firmware,
 		deviceNameFileName: deviceName,
 	}
-	if err := r.bootstrapDirectory(files); err != nil {
-		return nil, fmt.Errorf("failed to bootstrap remote processor: %w", err)
+	if err := r.bootstrapDeviceDir(files); err != nil {
+		return nil, fmt.Errorf("failed to bootstrap sysfs: %w", err)
+	}
+
+	if err := r.bootstrapFirmwareDir(); err != nil {
+		return nil, fmt.Errorf("failed to bootstrap firmware dir: %w", err)
 	}
 
 	watcher, err := dirwatcher.New(deviceDir)
@@ -70,7 +77,7 @@ func (r *RemoteProc) Close() error {
 	return err
 }
 
-func (r *RemoteProc) bootstrapDirectory(files map[string]string) error {
+func (r *RemoteProc) bootstrapDeviceDir(files map[string]string) error {
 	err := os.MkdirAll(r.deviceDir, 0755)
 	if err != nil {
 		return err
@@ -81,6 +88,10 @@ func (r *RemoteProc) bootstrapDirectory(files map[string]string) error {
 		}
 	}
 	return nil
+}
+
+func (r *RemoteProc) bootstrapFirmwareDir() error {
+	return os.MkdirAll(r.firmwareDir, 0755)
 }
 
 func (r *RemoteProc) loop() {
@@ -121,6 +132,12 @@ func (r *RemoteProc) handleStateChange(value string) {
 			log.Printf("Cannot start: no firmware specified")
 			r.state = StateCrashed
 			r.setState(StateCrashed)
+			return
+		}
+
+		if !fileExists(filepath.Join(r.firmwareDir, r.firmware)) {
+			log.Printf("Cannot start: firmware file does not exist")
+			r.setState(r.state)
 			return
 		}
 
@@ -181,4 +198,9 @@ func isStateSelfInflicted(value string) bool {
 		return true
 	}
 	return false
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return !os.IsNotExist(err)
 }

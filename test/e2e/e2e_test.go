@@ -12,51 +12,61 @@ import (
 
 func TestBootstrapping(t *testing.T) {
 	t.Run("default state is offline", func(t *testing.T) {
-		sysRoot := t.TempDir()
+		root := t.TempDir()
 
-		runSimulator(t, "--sysfs", sysRoot)
+		runSimulator(t, "--root", root)
 
-		deviceDir := filepath.Join(sysRoot, "class", "remoteproc", "remoteproc0")
+		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
 		assertFileContent(t, filepath.Join(deviceDir, "state"), "offline")
 	})
 
 	t.Run("default firmware is empty", func(t *testing.T) {
-		sysRoot := t.TempDir()
+		root := t.TempDir()
 
-		runSimulator(t, "--sysfs", sysRoot)
+		runSimulator(t, "--root", root)
 
-		deviceDir := filepath.Join(sysRoot, "class", "remoteproc", "remoteproc0")
+		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
 		assertFileContent(t, filepath.Join(deviceDir, "firmware"), "")
 	})
 
 	t.Run("device name can be overriden", func(t *testing.T) {
-		sysRoot := t.TempDir()
+		root := t.TempDir()
 		deviceName := "fancy-device"
 
-		runSimulator(t, "--sysfs", sysRoot, "--device-name", deviceName)
+		runSimulator(t, "--root", root, "--device-name", deviceName)
 
-		deviceDir := filepath.Join(sysRoot, "class", "remoteproc", "remoteproc0")
+		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
 		assertFileContent(t, filepath.Join(deviceDir, "name"), deviceName)
 	})
 
 	t.Run("device index can be overriden", func(t *testing.T) {
-		sysRoot := t.TempDir()
+		root := t.TempDir()
 
-		runSimulator(t, "--sysfs", sysRoot, "--device-index", "99")
+		runSimulator(t, "--root", root, "--device-index", "99")
 
-		deviceDir := filepath.Join(sysRoot, "class", "remoteproc", "remoteproc99")
+		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc99")
 		assert.DirExists(t, deviceDir)
+	})
+
+	t.Run("firmware directory is created", func(t *testing.T) {
+		root := t.TempDir()
+
+		runSimulator(t, "--root", root, "--device-index", "99")
+
+		firmwareDir := filepath.Join(root, "lib", "firmware")
+		assert.DirExists(t, firmwareDir)
 	})
 }
 
-func TestStartAndStop(t *testing.T) {
+func TestRunningFirmware(t *testing.T) {
 	t.Run("starting firmware sets state to running, stopping to offline", func(t *testing.T) {
-		sysRoot := t.TempDir()
-		runSimulator(t, "--sysfs", sysRoot, "--device-index", "3")
-		deviceDir := filepath.Join(sysRoot, "class", "remoteproc", "remoteproc3")
+		root := t.TempDir()
+		runSimulator(t, "--root", root, "--device-index", "3")
+		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc3")
 		stateFilePath := filepath.Join(deviceDir, "state")
 
 		// Load firmware and start remoteproc
+		require.NoError(t, writeFile(filepath.Join(root, "lib", "firmware", "some-firmware.elf"), ""))
 		require.NoError(t, writeFile(filepath.Join(deviceDir, "firmware"), "some-firmware.elf"))
 		require.NoError(t, writeFile(stateFilePath, "start"))
 
@@ -67,6 +77,20 @@ func TestStartAndStop(t *testing.T) {
 
 		requireState(t, deviceDir, "offline")
 	})
+
+	t.Run("firmware file must exist in /lib/firmware", func(t *testing.T) {
+		root := t.TempDir()
+		runSimulator(t, "--root", root)
+		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
+		stateFilePath := filepath.Join(deviceDir, "state")
+
+		// Load firmware and start remoteproc
+		require.NoError(t, writeFile(filepath.Join(deviceDir, "firmware"), "some-firmware.elf"))
+		require.NoError(t, writeFile(stateFilePath, "start"))
+
+		requireState(t, deviceDir, "offline")
+	})
+
 }
 
 func assertFileContent(t assert.TestingT, path string, wantContent string) {

@@ -19,23 +19,26 @@ go test ./...
 Start the simulator daemon:
 
 ```bash
-./remoteproc-simulator --sysfs /tmp/fake-root/sys --device-index 0 --device-name dsp0
+./remoteproc-simulator --root /tmp/fake-root --device-index 0 --device-name dsp0
 ```
 
 Control the simulated device via sysfs:
 
 ```bash
+# Prepare firmware file
+touch /tmp/fake-root/lib/firmware/hello_world.elf
+
 # Set firmware
-echo 'hello_world.fw' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
+echo hello_world.elf > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
 
 # Start the remote processor
-echo 'start' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
+echo start > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
 
 # Check status
 cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
 
 # Stop the remote processor
-echo 'stop' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
+echo stop > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
 ```
 
 Inspect device name:
