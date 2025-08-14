@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBootstrapping(t *testing.T) {
@@ -56,15 +57,15 @@ func TestStartAndStop(t *testing.T) {
 		stateFilePath := filepath.Join(deviceDir, "state")
 
 		// Load firmware and start remoteproc
-		assert.NoError(t, writeFile(filepath.Join(deviceDir, "firmware"), "some-firmware.elf"))
-		assert.NoError(t, writeFile(stateFilePath, "start"))
+		require.NoError(t, writeFile(filepath.Join(deviceDir, "firmware"), "some-firmware.elf"))
+		require.NoError(t, writeFile(stateFilePath, "start"))
 
-		assertState(t, deviceDir, "runnng")
+		requireState(t, deviceDir, "running")
 
 		// Stop remoteproc
-		assert.NoError(t, writeFile(stateFilePath, "stop"))
+		require.NoError(t, writeFile(stateFilePath, "stop"))
 
-		assertState(t, deviceDir, "offline")
+		requireState(t, deviceDir, "offline")
 	})
 }
 
@@ -75,11 +76,11 @@ func assertFileContent(t assert.TestingT, path string, wantContent string) {
 	}
 }
 
-func assertState(t *testing.T, deviceDir string, wantState string) {
+func requireState(t *testing.T, deviceDir string, wantState string) {
 	const waitFor = 500 * time.Millisecond
 	const tickEvery = 100 * time.Millisecond
 	stateFilePath := filepath.Join(deviceDir, "state")
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		assertFileContent(c, stateFilePath, wantState)
 	}, waitFor, tickEvery)
 }

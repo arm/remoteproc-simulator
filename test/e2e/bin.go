@@ -2,14 +2,13 @@ package e2e
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
 func runSimulator(t *testing.T, args ...string) {
@@ -20,19 +19,45 @@ func runSimulator(t *testing.T, args ...string) {
 
 	stderr, err := simulatorCmd.StderrPipe()
 	if err != nil {
-		t.Fatalf("Failed to get stdout pipe: %v", err)
+		t.Fatalf("Failed to get stderr pipe: %v", err)
 	}
+
 	if err := simulatorCmd.Start(); err != nil {
 		t.Fatalf("failed to start simulator: %v", err)
 	}
+
+	var stderrBuf bytes.Buffer
+	stderrTee := io.TeeReader(stderr, &stderrBuf)
+	readyCh := make(chan struct{})
+	go func() {
+		scanner := bufio.NewScanner(stderrTee)
+		isReady := false
+		for scanner.Scan() {
+			line := scanner.Text()
+			if !isReady {
+				if strings.Contains(line, "RemoteProcessor initialized") {
+					isReady = true
+					close(readyCh)
+				}
+			}
+		}
+	}()
 
 	t.Cleanup(func() {
 		if simulatorCmd.Process != nil {
 			simulatorCmd.Process.Kill()
 		}
+		if t.Failed() {
+			t.Logf("Simulator output:\n%s", stderrBuf.String())
+		}
 	})
 
-	requireReady(t, stderr)
+	select {
+	case <-readyCh:
+		return
+	case <-time.After(500 * time.Millisecond):
+		t.Fatalf("Simulator not ready within timeout")
+	}
 }
 
 func buildSimulatorBin(t *testing.T) string {
@@ -45,20 +70,4 @@ func buildSimulatorBin(t *testing.T) string {
 		t.Fatalf("Failed to build binary: %v\nOutput: %s", err, output)
 	}
 	return outputPath
-}
-
-func requireReady(t *testing.T, output io.Reader) {
-	t.Helper()
-	const waitFor = 1000 * time.Millisecond
-	const tickEvery = 100 * time.Millisecond
-	scanner := bufio.NewScanner(output)
-	require.Eventually(t, func() bool {
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, "RemoteProcessor initialized") {
-				return true
-			}
-		}
-		return false
-	}, waitFor, tickEvery, "simulator not ready within timeout")
 }
