@@ -60,7 +60,7 @@ func New(
 
 	go r.loop()
 
-	log.Printf("RemoteProcessor initialized at %s", r.deviceDir)
+	log.Printf("RemoteProc initialized at %s", r.deviceDir)
 	return r, nil
 }
 
@@ -87,7 +87,7 @@ func (r *RemoteProc) loop() {
 	for {
 		select {
 		case <-r.stopChan:
-			log.Printf("RemoteProcessor %s stopping...", r.deviceDir)
+			log.Printf("RemoteProc shutting down")
 			return
 		case event, ok := <-r.watcher.Changes():
 			if !ok {
@@ -113,24 +113,24 @@ func (r *RemoteProc) handleStateChange(value string) {
 	switch value {
 	case "start":
 		if r.state == StateRunning {
-			log.Printf("RemoteProc %s is already running", r.deviceDir)
+			log.Printf("RemoteProc is already running")
 			return
 		}
 
 		if r.firmware == "" {
-			log.Printf("Cannot start %s: no firmware specified", r.deviceDir)
+			log.Printf("Cannot start: no firmware specified")
 			r.state = StateCrashed
 			r.setState(StateCrashed)
 			return
 		}
 
-		log.Printf("Starting remoteproc %s with firmware %s", r.deviceDir, r.firmware)
+		log.Printf("Starting remoteproc with firmware %s", r.firmware)
 
 		// Simulate firmware loading delay
 		go func() {
 			select {
 			case <-time.After(100 * time.Millisecond):
-				log.Printf("Firmware %s loaded successfully", r.firmware)
+				log.Printf("Firmware %s started successfully", r.firmware)
 				r.setState(StateRunning)
 			case <-r.stopChan:
 				log.Printf("Firmware loading cancelled due to shutdown")
@@ -139,11 +139,11 @@ func (r *RemoteProc) handleStateChange(value string) {
 
 	case "stop":
 		if r.state == StateOffline {
-			log.Printf("RemoteProc %s is already stopped", r.deviceDir)
+			log.Printf("RemoteProc is already stopped")
 			return
 		}
 
-		log.Printf("Stopping remoteproc %s", r.deviceDir)
+		log.Printf("Stopping remoteproc")
 		r.setState(StateOffline)
 
 	default:
@@ -158,12 +158,12 @@ func (r *RemoteProc) setState(state State) {
 
 func (r *RemoteProc) handleFirmwareChange(value string) {
 	if r.state == StateRunning {
-		log.Printf("Cannot change firmware while %s is %s", r.deviceDir, r.state)
+		log.Printf("Cannot change firmware while RemoteProc is %s", r.state)
 		r.writeFile(firmwareFileName, r.firmware)
 		return
 	}
 	r.firmware = value
-	log.Printf("Firmware for %s set to: %s", r.deviceDir, value)
+	log.Printf("Firmware set to %s", value)
 }
 
 func (r *RemoteProc) writeFile(filename, content string) error {

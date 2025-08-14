@@ -35,7 +35,7 @@ func runSimulator(t *testing.T, args ...string) {
 		for scanner.Scan() {
 			line := scanner.Text()
 			if !isReady {
-				if strings.Contains(line, "RemoteProcessor initialized") {
+				if strings.Contains(line, "RemoteProc initialized") {
 					isReady = true
 					close(readyCh)
 				}
