@@ -37,3 +37,17 @@ cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
 # Stop the remote processor
 echo 'stop' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
 ```
+
+Inspect device name:
+
+```bash
+cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/name
+```
+
+## Installation from Releases
+
+The release binaries are unsigned. On macOS, you'll need to remove the quarantine attribute before running:
+
+```bash
+xattr -d com.apple.quarantine ./remoteproc-simulator
+```
