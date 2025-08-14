@@ -10,7 +10,7 @@ import (
 	"github.com/Arm-Debug/remoteproc-simulator/internal/dirwatcher"
 )
 
-type Processor struct {
+type RemoteProc struct {
 	deviceDir string
 	watcher   *dirwatcher.DirWatcher
 	state     State
@@ -30,11 +30,11 @@ func New(
 	sysRoot string,
 	deviceIndex uint,
 	deviceName string,
-) (*Processor, error) {
+) (*RemoteProc, error) {
 	deviceDirName := fmt.Sprintf("remoteproc%d", deviceIndex)
 	deviceDir := filepath.Join(sysRoot, "class", "remoteproc", deviceDirName)
 
-	r := &Processor{
+	r := &RemoteProc{
 		deviceDir: deviceDir,
 		firmware:  initialFirmware,
 		state:     initialState,
@@ -64,13 +64,13 @@ func New(
 	return r, nil
 }
 
-func (r *Processor) Close() error {
+func (r *RemoteProc) Close() error {
 	err := r.watcher.Close()
 	close(r.stopChan)
 	return err
 }
 
-func (r *Processor) bootstrapDirectory(files map[string]string) error {
+func (r *RemoteProc) bootstrapDirectory(files map[string]string) error {
 	err := os.MkdirAll(r.deviceDir, 0755)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (r *Processor) bootstrapDirectory(files map[string]string) error {
 	return nil
 }
 
-func (r *Processor) loop() {
+func (r *RemoteProc) loop() {
 	for {
 		select {
 		case <-r.stopChan:
@@ -103,7 +103,7 @@ func (r *Processor) loop() {
 	}
 }
 
-func (r *Processor) handleStateChange(value string) {
+func (r *RemoteProc) handleStateChange(value string) {
 	if isStateSelfInflicted(value) {
 		return
 	}
@@ -151,12 +151,12 @@ func (r *Processor) handleStateChange(value string) {
 	}
 }
 
-func (r *Processor) setState(state State) {
+func (r *RemoteProc) setState(state State) {
 	r.state = state
 	r.writeFile(stateFileName, state.String())
 }
 
-func (r *Processor) handleFirmwareChange(value string) {
+func (r *RemoteProc) handleFirmwareChange(value string) {
 	if r.state == StateRunning {
 		log.Printf("Cannot change firmware while %s is %s", r.deviceDir, r.state)
 		r.writeFile(firmwareFileName, r.firmware)
@@ -166,7 +166,7 @@ func (r *Processor) handleFirmwareChange(value string) {
 	log.Printf("Firmware for %s set to: %s", r.deviceDir, value)
 }
 
-func (r *Processor) writeFile(filename, content string) error {
+func (r *RemoteProc) writeFile(filename, content string) error {
 	path := filepath.Join(r.deviceDir, filename)
 	err := os.WriteFile(path, []byte(content), 0644)
 	if err != nil {
