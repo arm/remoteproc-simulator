@@ -17,7 +17,7 @@ func TestBootstrapping(t *testing.T) {
 		runSimulator(t, "--root", root)
 
 		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
-		assertFileContent(t, filepath.Join(deviceDir, "state"), "offline")
+		requireState(t, deviceDir, "offline")
 	})
 
 	t.Run("default firmware is empty", func(t *testing.T) {
@@ -63,30 +63,25 @@ func TestRunningFirmware(t *testing.T) {
 		root := t.TempDir()
 		runSimulator(t, "--root", root, "--device-index", "3")
 		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc3")
-		stateFilePath := filepath.Join(deviceDir, "state")
 
-		// Load firmware and start remoteproc
-		require.NoError(t, writeFile(filepath.Join(root, "lib", "firmware", "some-firmware.elf"), ""))
-		require.NoError(t, writeFile(filepath.Join(deviceDir, "firmware"), "some-firmware.elf"))
-		require.NoError(t, writeFile(stateFilePath, "start"))
+		createFirmwareFile(t, root, "some-firmware.elf")
+		loadFirmware(t, deviceDir, "some-firmware.elf")
+		setRemoteprocState(t, deviceDir, "start")
 
 		requireState(t, deviceDir, "running")
 
-		// Stop remoteproc
-		require.NoError(t, writeFile(stateFilePath, "stop"))
+		setRemoteprocState(t, deviceDir, "stop")
 
 		requireState(t, deviceDir, "offline")
 	})
 
 	t.Run("firmware file must exist in /lib/firmware", func(t *testing.T) {
 		root := t.TempDir()
-		runSimulator(t, "--root", root)
+		runSimulator(t, "--root", root, "--device-index", "0")
 		deviceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
-		stateFilePath := filepath.Join(deviceDir, "state")
 
-		// Load firmware and start remoteproc
-		require.NoError(t, writeFile(filepath.Join(deviceDir, "firmware"), "some-firmware.elf"))
-		require.NoError(t, writeFile(stateFilePath, "start"))
+		loadFirmware(t, deviceDir, "some-firmware.elf")
+		setRemoteprocState(t, deviceDir, "start")
 
 		requireState(t, deviceDir, "offline")
 	})
@@ -106,6 +101,21 @@ func requireState(t *testing.T, deviceDir string, wantState string) {
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		assertFileContent(c, stateFilePath, wantState)
 	}, waitFor, tickEvery)
+}
+
+func createFirmwareFile(t *testing.T, root, firmwareName string) {
+	firmwarePath := filepath.Join(root, "lib", "firmware", firmwareName)
+	require.NoError(t, writeFile(firmwarePath, ""))
+}
+
+func loadFirmware(t *testing.T, deviceDir, firmwareName string) {
+	firmwareFilePath := filepath.Join(deviceDir, "firmware")
+	require.NoError(t, writeFile(firmwareFilePath, firmwareName))
+}
+
+func setRemoteprocState(t *testing.T, deviceDir, state string) {
+	stateFilePath := filepath.Join(deviceDir, "state")
+	require.NoError(t, writeFile(stateFilePath, state))
 }
 
 func writeFile(path string, content string) error {
