@@ -26,7 +26,7 @@ Example usage:
   remoteproc-simulator --root /tmp/fake-root --device-index 0 --device-name dsp0
 
   # In another terminal, control via sysfs:
-	touch /tmp/fake-root/lib/firmware/hello_world.elf
+  touch /tmp/fake-root/lib/firmware/hello_world.elf
   echo 'hello_world.elf' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
   echo 'start' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
   cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
