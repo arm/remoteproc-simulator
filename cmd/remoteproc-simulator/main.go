@@ -18,8 +18,8 @@ func main() {
 
 	rootCmd := &cobra.Command{
 		Use:   "remoteproc-simulator",
-		Short: "RemoteProc Simulator - Linux remoteproc subsystem simulator",
-		Long: `RemoteProc Simulator simulates the Linux remoteproc subsystem for testing purposes.
+		Short: "Remoteproc Simulator - Linux remoteproc subsystem simulator",
+		Long: `Remoteproc Simulator simulates the Linux remoteproc subsystem for testing purposes.
 
 Example usage:
   # Start daemon with custom options

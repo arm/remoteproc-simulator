@@ -10,7 +10,7 @@ import (
 	"github.com/Arm-Debug/remoteproc-simulator/internal/dirwatcher"
 )
 
-type RemoteProc struct {
+type Remoteproc struct {
 	deviceDir   string
 	firmwareDir string
 	watcher     *dirwatcher.DirWatcher
@@ -31,12 +31,12 @@ func New(
 	root string,
 	deviceIndex uint,
 	deviceName string,
-) (*RemoteProc, error) {
+) (*Remoteproc, error) {
 	deviceDirName := fmt.Sprintf("remoteproc%d", deviceIndex)
 	deviceDir := filepath.Join(root, "sys", "class", "remoteproc", deviceDirName)
 	firmwareDir := filepath.Join(root, "lib", "firmware")
 
-	r := &RemoteProc{
+	r := &Remoteproc{
 		deviceDir:   deviceDir,
 		firmwareDir: firmwareDir,
 		firmware:    initialFirmware,
@@ -67,17 +67,17 @@ func New(
 
 	go r.loop()
 
-	log.Printf("RemoteProc initialized at %s", r.deviceDir)
+	log.Printf("Remoteproc initialized at %s", r.deviceDir)
 	return r, nil
 }
 
-func (r *RemoteProc) Close() error {
+func (r *Remoteproc) Close() error {
 	err := r.watcher.Close()
 	close(r.stopChan)
 	return err
 }
 
-func (r *RemoteProc) bootstrapDeviceDir(files map[string]string) error {
+func (r *Remoteproc) bootstrapDeviceDir(files map[string]string) error {
 	err := os.MkdirAll(r.deviceDir, 0755)
 	if err != nil {
 		return err
@@ -90,15 +90,15 @@ func (r *RemoteProc) bootstrapDeviceDir(files map[string]string) error {
 	return nil
 }
 
-func (r *RemoteProc) bootstrapFirmwareDir() error {
+func (r *Remoteproc) bootstrapFirmwareDir() error {
 	return os.MkdirAll(r.firmwareDir, 0755)
 }
 
-func (r *RemoteProc) loop() {
+func (r *Remoteproc) loop() {
 	for {
 		select {
 		case <-r.stopChan:
-			log.Printf("RemoteProc shutting down")
+			log.Printf("Remoteproc shutting down")
 			return
 		case event, ok := <-r.watcher.Changes():
 			if !ok {
@@ -114,7 +114,7 @@ func (r *RemoteProc) loop() {
 	}
 }
 
-func (r *RemoteProc) handleStateChange(value string) {
+func (r *Remoteproc) handleStateChange(value string) {
 	if isStateSelfInflicted(value) {
 		return
 	}
@@ -124,7 +124,7 @@ func (r *RemoteProc) handleStateChange(value string) {
 	switch value {
 	case "start":
 		if r.state == StateRunning {
-			log.Printf("RemoteProc is already running")
+			log.Printf("Remoteproc is already running")
 			return
 		}
 
@@ -156,7 +156,7 @@ func (r *RemoteProc) handleStateChange(value string) {
 
 	case "stop":
 		if r.state == StateOffline {
-			log.Printf("RemoteProc is already stopped")
+			log.Printf("Remoteproc is already stopped")
 			return
 		}
 
@@ -168,14 +168,14 @@ func (r *RemoteProc) handleStateChange(value string) {
 	}
 }
 
-func (r *RemoteProc) setState(state State) {
+func (r *Remoteproc) setState(state State) {
 	r.state = state
 	r.writeFile(stateFileName, state.String())
 }
 
-func (r *RemoteProc) handleFirmwareChange(value string) {
+func (r *Remoteproc) handleFirmwareChange(value string) {
 	if r.state == StateRunning {
-		log.Printf("Cannot change firmware while RemoteProc is %s", r.state)
+		log.Printf("Cannot change firmware while Remoteproc is %s", r.state)
 		r.writeFile(firmwareFileName, r.firmware)
 		return
 	}
@@ -183,7 +183,7 @@ func (r *RemoteProc) handleFirmwareChange(value string) {
 	log.Printf("Firmware set to %s", value)
 }
 
-func (r *RemoteProc) writeFile(filename, content string) error {
+func (r *Remoteproc) writeFile(filename, content string) error {
 	path := filepath.Join(r.deviceDir, filename)
 	err := os.WriteFile(path, []byte(content), 0644)
 	if err != nil {
