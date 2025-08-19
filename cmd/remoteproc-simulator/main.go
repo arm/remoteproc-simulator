@@ -11,10 +11,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	var root string
 	var deviceIndex uint
 	var deviceName string
+	var showVersion bool
 
 	rootCmd := &cobra.Command{
 		Use:   "remoteproc-simulator",
@@ -33,6 +40,17 @@ Example usage:
   cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/name  # Shows 'dsp0'
   echo 'stop' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state`,
 		Run: func(cmd *cobra.Command, args []string) {
+			if showVersion {
+				fmt.Println("remoteproc-simulator")
+				fmt.Printf("  version: %s\n", version)
+				if commit != "none" {
+					fmt.Printf("  commit: %s\n", commit)
+				}
+				if date != "unknown" {
+					fmt.Printf("  built at: %s\n", date)
+				}
+				os.Exit(0)
+			}
 			remoteProcessor, err := remoteproc.New(root, deviceIndex, deviceName)
 			if err != nil {
 				log.Fatalf("Failed to create remote processor: %v", err)
@@ -50,6 +68,7 @@ Example usage:
 	rootCmd.Flags().UintVar(&deviceIndex, "device-index", 0, "Device index (suffix of device directory)")
 	rootCmd.Flags().StringVar(&deviceName, "device-name", "dsp0", "Device name identifier (appears in the 'name' sysfs file)")
 	rootCmd.Flags().StringVar(&root, "root", "/tmp/fake-root", "Root path where /sys and /lib will be created")
+	rootCmd.Flags().BoolVar(&showVersion, "version", false, "Show version information")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
