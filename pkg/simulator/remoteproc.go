@@ -1,6 +1,7 @@
-package remoteproc
+package simulator
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,10 +12,14 @@ import (
 )
 
 type Remoteproc struct {
+	rootDir     string
+	deviceIndex uint
+	deviceName  string
+
 	deviceDir   string
 	firmwareDir string
 	watcher     *dirwatcher.DirWatcher
-	state       State
+	state       state
 	firmware    string
 	stopChan    chan struct{}
 }
@@ -27,53 +32,83 @@ const (
 	initialFirmware    = ""
 )
 
-func New(
-	rootDir string,
-	deviceIndex uint,
-	deviceName string,
-) (*Remoteproc, error) {
-	deviceDirName := fmt.Sprintf("remoteproc%d", deviceIndex)
-	deviceDir := filepath.Join(rootDir, "sys", "class", "remoteproc", deviceDirName)
-	firmwareDir := filepath.Join(rootDir, "lib", "firmware")
+type Config struct {
+	// RootDir is the location where /sys and /lib will be created
+	RootDir string
+	// DeviceIndex is the N in remoteprocN device directory
+	DeviceIndex uint
+	// DeviceName is the device name identifier written to /sys/class/remoteproc/.../name
+	DeviceName string
+}
 
-	r := &Remoteproc{
-		deviceDir:   deviceDir,
-		firmwareDir: firmwareDir,
-		firmware:    initialFirmware,
-		state:       initialState,
-		stopChan:    make(chan struct{}),
+func (c Config) validate() error {
+	if c.RootDir == "" {
+		return errors.New("root directory must be specified")
+	}
+	if c.DeviceName == "" {
+		return errors.New("device name must be specified")
+	}
+	return nil
+}
+
+// NewRemoteproc creates a new [Remoteproc].
+// The caller should call Close when finished to clean up resources.
+func NewRemoteproc(config Config) (*Remoteproc, error) {
+	if err := config.validate(); err != nil {
+		return nil, err
 	}
 
+	r := &Remoteproc{
+		rootDir:     config.RootDir,
+		deviceIndex: config.DeviceIndex,
+		deviceName:  config.DeviceName,
+		firmware:    initialFirmware,
+		state:       initialState,
+	}
+
+	deviceDirName := fmt.Sprintf("remoteproc%d", r.deviceIndex)
+	r.deviceDir = filepath.Join(r.rootDir, "sys", "class", "remoteproc", deviceDirName)
+	r.firmwareDir = filepath.Join(r.rootDir, "lib", "firmware")
+
+	return r, r.start()
+}
+
+func (r *Remoteproc) start() error {
 	files := map[string]string{
 		stateFileName:      r.state.String(),
 		firmwareFileName:   r.firmware,
-		deviceNameFileName: deviceName,
+		deviceNameFileName: r.deviceName,
 	}
 	if err := r.bootstrapDeviceDir(files); err != nil {
-		return nil, fmt.Errorf("failed to bootstrap sysfs: %w", err)
+		return fmt.Errorf("failed to bootstrap sysfs: %w", err)
 	}
 
 	if err := r.bootstrapFirmwareDir(); err != nil {
-		return nil, fmt.Errorf("failed to bootstrap firmware dir: %w", err)
+		return fmt.Errorf("failed to bootstrap firmware dir: %w", err)
 	}
 
-	watcher, err := dirwatcher.New(deviceDir)
+	watcher, err := dirwatcher.New(r.deviceDir)
 	if err != nil {
-		r.Close()
-		return nil, fmt.Errorf("failed to setup directory watcher: %w", err)
+		return fmt.Errorf("failed to setup directory watcher: %w", err)
 	}
 
 	r.watcher = watcher
 
+	r.stopChan = make(chan struct{})
 	go r.loop()
 
 	log.Printf("Remoteproc initialized at %s", r.deviceDir)
-	return r, nil
+	return nil
 }
 
 func (r *Remoteproc) Close() error {
-	err := r.watcher.Close()
-	close(r.stopChan)
+	var err error
+	if r.watcher != nil {
+		err = r.watcher.Close()
+	}
+	if r.stopChan != nil {
+		close(r.stopChan)
+	}
 	return err
 }
 
@@ -168,7 +203,7 @@ func (r *Remoteproc) handleStateChange(value string) {
 	}
 }
 
-func (r *Remoteproc) setState(state State) {
+func (r *Remoteproc) setState(state state) {
 	r.state = state
 	r.writeFile(stateFileName, state.String())
 }

@@ -1,14 +1,14 @@
-package remoteproc
+package simulator
 
-type State int
+type state int
 
 const (
-	StateOffline State = iota
+	StateOffline state = iota
 	StateRunning
 	StateCrashed
 )
 
-func (s State) String() string {
+func (s state) String() string {
 	switch s {
 	case StateOffline:
 		return "offline"

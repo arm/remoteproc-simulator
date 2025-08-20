@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Arm-Debug/remoteproc-simulator/internal/remoteproc"
+	"github.com/Arm-Debug/remoteproc-simulator/pkg/simulator"
 	"github.com/spf13/cobra"
 )
 
@@ -51,24 +51,31 @@ Example usage:
 				}
 				os.Exit(0)
 			}
-			remoteProcessor, err := remoteproc.New(rootDir, deviceIndex, deviceName)
+
+			sim, err := simulator.NewRemoteproc(
+				simulator.Config{
+					RootDir:     rootDir,
+					DeviceIndex: deviceIndex,
+					DeviceName:  deviceName,
+				},
+			)
 			if err != nil {
-				return fmt.Errorf("can't initialise remoteproc: %w", err)
+				return fmt.Errorf("failed to start simulator: %v", err)
 			}
-			defer remoteProcessor.Close()
+			defer sim.Close()
 
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
 			<-sigChan
 			log.Println("Received shutdown signal")
+
 			return nil
 		},
 	}
 
-	rootCmd.Flags().UintVar(&deviceIndex, "device-index", 0, "suffix of device directory (default 0)")
-	rootCmd.Flags().StringVar(&deviceName, "device-name", "dsp0", "device name identifier")
-	rootCmd.Flags().StringVar(&rootDir, "root-dir", "/tmp/fake-root", "directory where /sys and /lib will be created")
+	rootCmd.Flags().UintVar(&deviceIndex, "device-index", 0, "is the N in remoteprocN device directory (default 0)")
+	rootCmd.Flags().StringVar(&deviceName, "device-name", "dsp0", "device name identifier written to /sys/class/remoteproc/.../name")
+	rootCmd.Flags().StringVar(&rootDir, "root-dir", "/tmp/fake-root", "location where /sys and /lib will be created")
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "show version information")
 
 	if err := rootCmd.Execute(); err != nil {
