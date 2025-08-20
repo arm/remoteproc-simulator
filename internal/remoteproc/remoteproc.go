@@ -28,13 +28,13 @@ const (
 )
 
 func New(
-	root string,
+	rootDir string,
 	deviceIndex uint,
 	deviceName string,
 ) (*Remoteproc, error) {
 	deviceDirName := fmt.Sprintf("remoteproc%d", deviceIndex)
-	deviceDir := filepath.Join(root, "sys", "class", "remoteproc", deviceDirName)
-	firmwareDir := filepath.Join(root, "lib", "firmware")
+	deviceDir := filepath.Join(rootDir, "sys", "class", "remoteproc", deviceDirName)
+	firmwareDir := filepath.Join(rootDir, "lib", "firmware")
 
 	r := &Remoteproc{
 		deviceDir:   deviceDir,

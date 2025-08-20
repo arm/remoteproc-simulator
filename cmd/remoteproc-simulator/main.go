@@ -18,7 +18,7 @@ var (
 )
 
 func main() {
-	var root string
+	var rootDir string
 	var deviceIndex uint
 	var deviceName string
 	var showVersion bool
@@ -30,15 +30,15 @@ func main() {
 
 Example usage:
   # Start daemon with custom options
-  remoteproc-simulator --root /tmp/fake-root --device-index 0 --device-name dsp0
+  remoteproc-simulator --root-dir /tmp/fake-root --device-index 0 --device-name dsp0
 
   # In another terminal, control via sysfs:
   touch /tmp/fake-root/lib/firmware/hello_world.elf
-  echo 'hello_world.elf' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
-  echo 'start' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
+  echo hello_world.elf > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
+  echo start > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
   cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
   cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/name  # Shows 'dsp0'
-  echo 'stop' > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state`,
+  echo stop > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if showVersion {
 				fmt.Println("remoteproc-simulator")
@@ -51,7 +51,7 @@ Example usage:
 				}
 				os.Exit(0)
 			}
-			remoteProcessor, err := remoteproc.New(root, deviceIndex, deviceName)
+			remoteProcessor, err := remoteproc.New(rootDir, deviceIndex, deviceName)
 			if err != nil {
 				log.Fatalf("Failed to create remote processor: %v", err)
 			}
@@ -65,10 +65,10 @@ Example usage:
 		},
 	}
 
-	rootCmd.Flags().UintVar(&deviceIndex, "device-index", 0, "Device index (suffix of device directory)")
-	rootCmd.Flags().StringVar(&deviceName, "device-name", "dsp0", "Device name identifier (appears in the 'name' sysfs file)")
-	rootCmd.Flags().StringVar(&root, "root", "/tmp/fake-root", "Root path where /sys and /lib will be created")
-	rootCmd.Flags().BoolVar(&showVersion, "version", false, "Show version information")
+	rootCmd.Flags().UintVar(&deviceIndex, "device-index", 0, "suffix of device directory (default 0)")
+	rootCmd.Flags().StringVar(&deviceName, "device-name", "dsp0", "device name identifier")
+	rootCmd.Flags().StringVar(&rootDir, "root-dir", "/tmp/fake-root", "directory where /sys and /lib will be created")
+	rootCmd.Flags().BoolVar(&showVersion, "version", false, "show version information")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

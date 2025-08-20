@@ -19,7 +19,7 @@ go test ./...
 Start the simulator daemon:
 
 ```bash
-./remoteproc-simulator --root /tmp/fake-root --device-index 0 --device-name dsp0
+./remoteproc-simulator --root-dir /tmp/fake-root --device-index 0 --device-name dsp0
 ```
 
 Control the simulated device via sysfs:
