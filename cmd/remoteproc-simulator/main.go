@@ -52,6 +52,14 @@ Example usage:
 				os.Exit(0)
 			}
 
+			if !cmd.Flags().Changed("root-dir") {
+				tmpDir, err := os.MkdirTemp("", "remoteproc-simulator-*")
+				if err != nil {
+					return err
+				}
+				rootDir = tmpDir
+			}
+
 			sim, err := simulator.NewRemoteproc(
 				simulator.Config{
 					RootDir:     rootDir,
@@ -75,7 +83,7 @@ Example usage:
 
 	rootCmd.Flags().UintVar(&deviceIndex, "device-index", 0, "is the N in remoteprocN device directory (default 0)")
 	rootCmd.Flags().StringVar(&deviceName, "device-name", "dsp0", "device name identifier written to /sys/class/remoteproc/.../name")
-	rootCmd.Flags().StringVar(&rootDir, "root-dir", "/tmp/fake-root", "location where /sys and /lib will be created")
+	rootCmd.Flags().StringVar(&rootDir, "root-dir", "", "location where /sys and /lib will be created")
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "show version information")
 
 	if err := rootCmd.Execute(); err != nil {
