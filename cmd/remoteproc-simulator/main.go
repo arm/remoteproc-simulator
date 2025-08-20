@@ -33,12 +33,17 @@ Example usage:
   remoteproc-simulator --root-dir /tmp/fake-root --device-index 0 --device-name dsp0
 
   # In another terminal, control via sysfs:
+  cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/name  # Shows 'dsp0'
+
   touch /tmp/fake-root/lib/firmware/hello_world.elf
   echo hello_world.elf > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
+
   echo start > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
-  cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
-  cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/name  # Shows 'dsp0'
-  echo stop > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state`,
+  cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state  # Shows 'running'
+
+  echo stop > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
+  cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state  # Shows 'offline'
+	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if showVersion {
 				fmt.Println("remoteproc-simulator")
