@@ -39,7 +39,7 @@ Example usage:
   cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
   cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/name  # Shows 'dsp0'
   echo stop > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if showVersion {
 				fmt.Println("remoteproc-simulator")
 				fmt.Printf("  version: %s\n", version)
@@ -53,7 +53,7 @@ Example usage:
 			}
 			remoteProcessor, err := remoteproc.New(rootDir, deviceIndex, deviceName)
 			if err != nil {
-				log.Fatalf("Failed to create remote processor: %v", err)
+				return fmt.Errorf("can't initialise remoteproc: %w", err)
 			}
 			defer remoteProcessor.Close()
 
@@ -62,6 +62,7 @@ Example usage:
 
 			<-sigChan
 			log.Println("Received shutdown signal")
+			return nil
 		},
 	}
 
@@ -71,7 +72,6 @@ Example usage:
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "show version information")
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
