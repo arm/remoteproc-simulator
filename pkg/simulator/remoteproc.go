@@ -12,11 +12,11 @@ import (
 )
 
 type Remoteproc struct {
-	rootDir     string
-	deviceIndex uint
-	deviceName  string
+	rootDir string
+	index   uint
+	name    string
 
-	deviceDir   string
+	instanceDir string
 	firmwareDir string
 	watcher     *dirwatcher.DirWatcher
 	state       state
@@ -25,28 +25,28 @@ type Remoteproc struct {
 }
 
 const (
-	firmwareFileName   = "firmware"
-	stateFileName      = "state"
-	deviceNameFileName = "name"
-	initialState       = StateOffline
-	initialFirmware    = ""
+	firmwareFileName = "firmware"
+	stateFileName    = "state"
+	nameFileName     = "name"
+	initialState     = StateOffline
+	initialFirmware  = ""
 )
 
 type Config struct {
 	// RootDir is the location where /sys and /lib will be created
 	RootDir string
-	// DeviceIndex is the N in remoteprocN device directory
-	DeviceIndex uint
-	// DeviceName is the device name identifier written to /sys/class/remoteproc/.../name
-	DeviceName string
+	// Index is the N in /sys/class/remoteproc/remoteprocN/.../
+	Index uint
+	// Name is the remote processor name written to /sys/class/remoteproc/.../name
+	Name string
 }
 
 func (c Config) validate() error {
 	if c.RootDir == "" {
 		return errors.New("root directory must be specified")
 	}
-	if c.DeviceName == "" {
-		return errors.New("device name must be specified")
+	if c.Name == "" {
+		return errors.New("name name must be specified")
 	}
 	return nil
 }
@@ -59,15 +59,15 @@ func NewRemoteproc(config Config) (*Remoteproc, error) {
 	}
 
 	r := &Remoteproc{
-		rootDir:     config.RootDir,
-		deviceIndex: config.DeviceIndex,
-		deviceName:  config.DeviceName,
-		firmware:    initialFirmware,
-		state:       initialState,
+		rootDir:  config.RootDir,
+		index:    config.Index,
+		name:     config.Name,
+		firmware: initialFirmware,
+		state:    initialState,
 	}
 
-	deviceDirName := fmt.Sprintf("remoteproc%d", r.deviceIndex)
-	r.deviceDir = filepath.Join(r.rootDir, "sys", "class", "remoteproc", deviceDirName)
+	instanceDirName := fmt.Sprintf("remoteproc%d", r.index)
+	r.instanceDir = filepath.Join(r.rootDir, "sys", "class", "remoteproc", instanceDirName)
 	r.firmwareDir = filepath.Join(r.rootDir, "lib", "firmware")
 
 	return r, r.start()
@@ -75,11 +75,11 @@ func NewRemoteproc(config Config) (*Remoteproc, error) {
 
 func (r *Remoteproc) start() error {
 	files := map[string]string{
-		stateFileName:      r.state.String(),
-		firmwareFileName:   r.firmware,
-		deviceNameFileName: r.deviceName,
+		stateFileName:    r.state.String(),
+		firmwareFileName: r.firmware,
+		nameFileName:     r.name,
 	}
-	if err := r.bootstrapDeviceDir(files); err != nil {
+	if err := r.bootstrapInstanceDir(files); err != nil {
 		return fmt.Errorf("failed to bootstrap sysfs: %w", err)
 	}
 
@@ -87,7 +87,7 @@ func (r *Remoteproc) start() error {
 		return fmt.Errorf("failed to bootstrap firmware dir: %w", err)
 	}
 
-	watcher, err := dirwatcher.New(r.deviceDir)
+	watcher, err := dirwatcher.New(r.instanceDir)
 	if err != nil {
 		return fmt.Errorf("failed to setup directory watcher: %w", err)
 	}
@@ -97,7 +97,7 @@ func (r *Remoteproc) start() error {
 	r.stopChan = make(chan struct{})
 	go r.loop()
 
-	log.Printf("Remoteproc initialized at %s", r.deviceDir)
+	log.Printf("Remoteproc initialized at %s", r.instanceDir)
 	return nil
 }
 
@@ -112,8 +112,8 @@ func (r *Remoteproc) Close() error {
 	return err
 }
 
-func (r *Remoteproc) bootstrapDeviceDir(files map[string]string) error {
-	err := os.MkdirAll(r.deviceDir, 0755)
+func (r *Remoteproc) bootstrapInstanceDir(files map[string]string) error {
+	err := os.MkdirAll(r.instanceDir, 0755)
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (r *Remoteproc) handleFirmwareChange(value string) {
 }
 
 func (r *Remoteproc) writeFile(filename, content string) error {
-	path := filepath.Join(r.deviceDir, filename)
+	path := filepath.Join(r.instanceDir, filename)
 	err := os.WriteFile(path, []byte(content), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write %s: %v", filename, err)

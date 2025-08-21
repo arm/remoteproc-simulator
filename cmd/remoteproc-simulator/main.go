@@ -19,8 +19,8 @@ var (
 
 func main() {
 	var rootDir string
-	var deviceIndex uint
-	var deviceName string
+	var index uint
+	var name string
 	var showVersion bool
 
 	rootCmd := &cobra.Command{
@@ -30,7 +30,7 @@ func main() {
 
 Example usage:
   # Start daemon with custom options
-  remoteproc-simulator --root-dir /tmp/fake-root --device-index 0 --device-name dsp0
+  remoteproc-simulator --root-dir /tmp/fake-root --index 0 --name dsp0
 
   # In another terminal, control via sysfs:
   cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/name  # Shows 'dsp0'
@@ -67,9 +67,9 @@ Example usage:
 
 			sim, err := simulator.NewRemoteproc(
 				simulator.Config{
-					RootDir:     rootDir,
-					DeviceIndex: deviceIndex,
-					DeviceName:  deviceName,
+					RootDir: rootDir,
+					Index:   index,
+					Name:    name,
 				},
 			)
 			if err != nil {
@@ -86,8 +86,8 @@ Example usage:
 		},
 	}
 
-	rootCmd.Flags().UintVar(&deviceIndex, "device-index", 0, "is the N in remoteprocN device directory (default 0)")
-	rootCmd.Flags().StringVar(&deviceName, "device-name", "dsp0", "device name identifier written to /sys/class/remoteproc/.../name")
+	rootCmd.Flags().UintVar(&index, "index", 0, "is the N in /sys/class/remoteproc/remoteprocN/.../ (default 0)")
+	rootCmd.Flags().StringVar(&name, "name", "dsp0", "remote processor name written to /sys/class/remoteproc/.../name")
 	rootCmd.Flags().StringVar(&rootDir, "root-dir", "", "location where /sys and /lib will be created")
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "show version information")
 

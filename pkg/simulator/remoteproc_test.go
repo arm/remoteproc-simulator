@@ -16,11 +16,11 @@ func TestConfigValidation(t *testing.T) {
 		assert.ErrorContains(t, err, "root directory must be specified")
 	})
 
-	t.Run("it requires device name to be specified", func(t *testing.T) {
-		invalidConfig := simulator.Config{RootDir: "some/dir", DeviceName: ""}
+	t.Run("it requires name to be specified", func(t *testing.T) {
+		invalidConfig := simulator.Config{RootDir: "some/dir", Name: ""}
 
 		_, err := simulator.NewRemoteproc(invalidConfig)
 
-		assert.ErrorContains(t, err, "device name must be specified")
+		assert.ErrorContains(t, err, "name must be specified")
 	})
 }
