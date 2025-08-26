@@ -64,7 +64,7 @@ func buildSimulatorBin(t *testing.T) string {
 	t.Helper()
 	tempDir := t.TempDir()
 	outputPath := filepath.Join(tempDir, "remoteproc-simulator")
-	cmd := exec.Command("go", "build", "-o", outputPath, "../../cmd/remoteproc-simulator")
+	cmd := exec.Command("go", "build", "-o", outputPath, "../cmd/remoteproc-simulator")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to build binary: %v\nOutput: %s", err, output)
