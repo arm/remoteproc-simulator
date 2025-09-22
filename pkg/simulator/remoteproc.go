@@ -4,24 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/Arm-Debug/remoteproc-simulator/internal/dirwatcher"
 )
 
 type Remoteproc struct {
-	rootDir string
-	index   uint
-	name    string
-
-	instanceDir string
-	firmwareDir string
-	watcher     *dirwatcher.DirWatcher
-	state       state
-	firmware    string
-	stopChan    chan struct{}
+	name     string
+	fs       *FileSystemManager
+	watcher  *dirwatcher.DirWatcher
+	state    state
+	firmware string
+	stopChan chan struct{}
 }
 
 const (
@@ -59,74 +53,73 @@ func NewRemoteproc(config Config) (*Remoteproc, error) {
 	}
 
 	r := &Remoteproc{
-		rootDir:  config.RootDir,
-		index:    config.Index,
 		name:     config.Name,
+		fs:       NewFileSystemManager(config.RootDir, config.Index),
 		firmware: initialFirmware,
 		state:    initialState,
 	}
 
-	instanceDirName := fmt.Sprintf("remoteproc%d", r.index)
-	r.instanceDir = filepath.Join(r.rootDir, "sys", "class", "remoteproc", instanceDirName)
-	r.firmwareDir = filepath.Join(r.rootDir, "lib", "firmware")
-
-	return r, r.start()
+	err := r.start()
+	if err != nil {
+		r.Close()
+	}
+	return r, err
 }
 
 func (r *Remoteproc) start() error {
-	files := map[string]string{
-		stateFileName:    r.state.String(),
-		firmwareFileName: r.firmware,
-		nameFileName:     r.name,
-	}
-	if err := r.bootstrapInstanceDir(files); err != nil {
-		return fmt.Errorf("failed to bootstrap sysfs: %w", err)
+	if err := r.bootstrapDirectoryStructure(); err != nil {
+		return fmt.Errorf("failed to bootstrap directory structure: %w", err)
 	}
 
-	if err := r.bootstrapFirmwareDir(); err != nil {
-		return fmt.Errorf("failed to bootstrap firmware dir: %w", err)
-	}
-
-	watcher, err := dirwatcher.New(r.instanceDir)
+	watcher, err := dirwatcher.New(r.fs.InstanceDir())
 	if err != nil {
 		return fmt.Errorf("failed to setup directory watcher: %w", err)
 	}
-
 	r.watcher = watcher
 
 	r.stopChan = make(chan struct{})
 	go r.loop()
 
-	log.Printf("Remoteproc initialized at %s", r.instanceDir)
+	log.Printf("Remoteproc initialized at %s", r.fs.InstanceDir())
 	return nil
 }
 
 func (r *Remoteproc) Close() error {
-	var err error
+	var watcherErr error
 	if r.watcher != nil {
-		err = r.watcher.Close()
+		watcherErr = r.watcher.Close()
 	}
+
 	if r.stopChan != nil {
 		close(r.stopChan)
 	}
-	return err
+
+	var fsErr error
+	if r.fs != nil {
+		fsErr = r.fs.Cleanup()
+	}
+
+	return errors.Join(watcherErr, fsErr)
 }
 
-func (r *Remoteproc) bootstrapInstanceDir(files map[string]string) error {
-	err := os.MkdirAll(r.instanceDir, 0755)
-	if err != nil {
+func (r *Remoteproc) bootstrapDirectoryStructure() error {
+	if err := r.fs.BootstrapDirectories(); err != nil {
 		return err
 	}
+
+	files := map[string]string{
+		stateFileName:    r.state.String(),
+		firmwareFileName: r.firmware,
+		nameFileName:     r.name,
+	}
+
 	for filename, content := range files {
-		if err := r.writeFile(filename, content); err != nil {
+		if err := r.fs.WriteInstanceFile(filename, content); err != nil {
 			return err
 		}
 	}
-	return nil
-}
 
-func (r *Remoteproc) bootstrapFirmwareDir() error {
-	return os.MkdirAll(r.firmwareDir, 0755)
+	return nil
 }
 
 func (r *Remoteproc) loop() {
@@ -170,8 +163,8 @@ func (r *Remoteproc) handleStateChange(value string) {
 			return
 		}
 
-		if !fileExists(filepath.Join(r.firmwareDir, r.firmware)) {
-			log.Printf("Cannot start: firmware file not found in %s directory", r.firmwareDir)
+		if !r.fs.FirmwareExists(r.firmware) {
+			log.Printf("Cannot start: firmware file not found in %s directory", r.fs.FirmwareDir())
 			r.setState(r.state)
 			return
 		}
@@ -205,26 +198,17 @@ func (r *Remoteproc) handleStateChange(value string) {
 
 func (r *Remoteproc) setState(state state) {
 	r.state = state
-	r.writeFile(stateFileName, state.String())
+	r.fs.WriteInstanceFile(stateFileName, state.String())
 }
 
 func (r *Remoteproc) handleFirmwareChange(value string) {
 	if r.state == StateRunning {
 		log.Printf("Cannot change firmware while Remoteproc is %s", r.state)
-		r.writeFile(firmwareFileName, r.firmware)
+		r.fs.WriteInstanceFile(firmwareFileName, r.firmware)
 		return
 	}
 	r.firmware = value
 	log.Printf("Firmware set to %s", value)
-}
-
-func (r *Remoteproc) writeFile(filename, content string) error {
-	path := filepath.Join(r.instanceDir, filename)
-	err := os.WriteFile(path, []byte(content), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write %s: %v", filename, err)
-	}
-	return nil
 }
 
 func isStateSelfInflicted(value string) bool {
@@ -233,9 +217,4 @@ func isStateSelfInflicted(value string) bool {
 		return true
 	}
 	return false
-}
-
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return !os.IsNotExist(err)
 }
