@@ -3,7 +3,7 @@ package simulator_test
 import (
 	"testing"
 
-	"github.com/Arm-Debug/remoteproc-simulator/pkg/simulator"
+	"github.com/arm/remoteproc-simulator/pkg/simulator"
 	"github.com/stretchr/testify/assert"
 )
 

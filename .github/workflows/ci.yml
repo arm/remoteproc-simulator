@@ -15,28 +15,28 @@ jobs:
   test-and-lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
-    - uses: actions/setup-go@v5
-      with:
-        go-version-file: 'go.mod'
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version-file: 'go.mod'
 
-    - name: Download dependencies
-      run: go mod download
+      - name: Download dependencies
+        run: go mod download
 
-    - name: Run fast tests
-      run: go test -v -race ./internal/... ./pkg/...
+      - name: Run fast tests
+        run: go test -v -race ./internal/... ./pkg/...
 
-    - name: Run e2e tests
-      run: go test -v ./e2e/...
+      - name: Run e2e tests
+        run: go test -v ./e2e/...
 
-    - name: Run vet
-      run: go vet ./...
+      - name: Run vet
+        run: go vet ./...
 
-    - name: Check formatting
-      run: |
-        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-          echo "Please run 'gofmt -s -w .' to format your code"
-          gofmt -s -l .
-          exit 1
-        fi
+      - name: Check formatting
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "Please run 'gofmt -s -w .' to format your code"
+            gofmt -s -l .
+            exit 1
+          fi

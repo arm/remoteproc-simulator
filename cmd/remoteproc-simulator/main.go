@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Arm-Debug/remoteproc-simulator/pkg/simulator"
+	"github.com/arm/remoteproc-simulator/pkg/simulator"
 	"github.com/spf13/cobra"
 )
 

@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/Arm-Debug/remoteproc-simulator/internal/dirwatcher"
+	"github.com/arm/remoteproc-simulator/internal/dirwatcher"
 )
 
 type Remoteproc struct {

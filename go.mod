@@ -1,4 +1,4 @@
-module github.com/Arm-Debug/remoteproc-simulator
+module github.com/arm/remoteproc-simulator
 
 go 1.25.0
 
