@@ -5,7 +5,8 @@ A simulator for the Linux remoteproc subsystem that creates a fake sysfs interfa
 ## Build
 
 ```bash
-go build ./cmd/remoteproc-simulator
+mkdir -p dist
+go build -o dist/remoteproc-simulator ./cmd/remoteproc-simulator
 ```
 
 ## Test
@@ -19,7 +20,7 @@ go test ./...
 Start the simulator daemon:
 
 ```bash
-./remoteproc-simulator --root-dir /tmp/fake-root --index 0 --name dsp0
+dist/remoteproc-simulator --root-dir /tmp/fake-root --index 0 --name dsp0
 ```
 
 Control the simulated remote processor via sysfs:
