@@ -3,6 +3,7 @@ package e2e
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,8 +41,10 @@ func TestRunningFirmware(t *testing.T) {
 func createFirmwareFile(t *testing.T, root, firmwareName string) {
 	firmwareDirPath, err := os.ReadFile(filepath.Join(root, "sys", "module", "firmware_class", "parameters", "path"))
 	require.NoError(t, err)
-	os.MkdirAll(string(firmwareDirPath), 0755)
-	firmwarePath := filepath.Join(string(firmwareDirPath), firmwareName)
+	firmwareDirPathStr := strings.TrimSpace(string(firmwareDirPath))
+	err = os.MkdirAll(firmwareDirPathStr, 0755)
+	require.NoError(t, err)
+	firmwarePath := filepath.Join(firmwareDirPathStr, firmwareName)
 	require.NoError(t, writeFile(firmwarePath, ""))
 }
 

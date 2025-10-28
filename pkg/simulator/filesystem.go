@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type FileSystemManager struct {
@@ -41,7 +42,10 @@ func (fs *FileSystemManager) BootstrapDirectories() error {
 		fs.createdDirs = append(fs.createdDirs, createdFirmwareDirPathFileFolder)
 	}
 	// Write Firmware path
-	os.WriteFile(fs.firmwareDirPathFile, []byte(fs.firmwareDir), 0644)
+	if err := os.WriteFile(fs.firmwareDirPathFile, []byte(fs.firmwareDir), 0644); err != nil {
+		fs.Cleanup()
+		return fmt.Errorf("failed to write firmware path file: %w", err)
+	}
 
 	createdFirmwareDir, err := mkdirAll(fs.firmwareDir, 0755)
 	if err != nil {
@@ -65,15 +69,19 @@ func (fs *FileSystemManager) WriteInstanceFile(filename, content string) error {
 }
 
 func (fs *FileSystemManager) FirmwareExists(firmwareName string) bool {
-	firmwareDir, _ := os.ReadFile(fs.firmwareDirPathFile) // simulate reading the firmware path
-	firmwareDirStr := string(firmwareDir)
+	firmwareDir, err := os.ReadFile(fs.firmwareDirPathFile) // simulate reading the firmware path
+	if err != nil {
+		fmt.Printf("failed to read firmware dir path: %v\n", err)
+		return false
+	}
+	firmwareDirStr := strings.TrimSpace(string(firmwareDir))
 	if firmwareDirStr != fs.firmwareDir {
 		fmt.Printf("firmware path mismatch: expected %s from /sys/module/firmware_class/parameters/path, got %s\n", fs.firmwareDir, firmwareDirStr)
 		return false
 	}
 
 	path := filepath.Join(fs.firmwareDir, firmwareName)
-	_, err := os.Stat(path)
+	_, err = os.Stat(path)
 	return !os.IsNotExist(err)
 }
 
