@@ -101,7 +101,12 @@ func mkfile(path string, perm os.FileMode) (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	return dir, nil
+	if dir == "" {
+		return path, nil
+	} else {
+		return dir, nil
+	}
+
 }
 
 func mkdirAll(path string, perm os.FileMode) (string, error) {
