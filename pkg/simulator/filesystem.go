@@ -32,12 +32,14 @@ func (fs *FileSystemManager) BootstrapDirectories() error {
 		fs.createdDirs = append(fs.createdDirs, createdInstancePath)
 	}
 
-	createdFirmwareDirPathFileFolder, err := mkfile(fs.firmwareDirPathFile, 0755)
+	createdParentDir, err := mkfile(fs.firmwareDirPathFile, 0755)
 	if err != nil {
 		fs.Cleanup()
 		return fmt.Errorf("failed to create firmware path directory: %w", err)
 	}
-	fs.createdDirs = append(fs.createdDirs, createdFirmwareDirPathFileFolder)
+	if createdParentDir != "" {
+		fs.createdDirs = append(fs.createdDirs, createdParentDir)
+	}
 
 	if err := os.WriteFile(fs.firmwareDirPathFile, []byte(fs.firmwareDir), 0644); err != nil {
 		fs.Cleanup()
@@ -49,7 +51,9 @@ func (fs *FileSystemManager) BootstrapDirectories() error {
 		fs.Cleanup()
 		return fmt.Errorf("failed to create firmware directory: %w", err)
 	}
-	fs.createdDirs = append(fs.createdDirs, createdFirmwareDir)
+	if createdFirmwareDir != "" {
+		fs.createdDirs = append(fs.createdDirs, createdFirmwareDir)
+	}
 
 	return nil
 }
