@@ -92,7 +92,7 @@ func (fs *FileSystemManager) Cleanup() error {
 }
 
 func mkfile(path string, perm os.FileMode) (string, error) {
-	folder, err := mkdirAll(filepath.Dir(path), perm)
+	dir, err := mkdirAll(filepath.Dir(path), perm)
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +101,7 @@ func mkfile(path string, perm os.FileMode) (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	return folder, nil
+	return dir, nil
 }
 
 func mkdirAll(path string, perm os.FileMode) (string, error) {
