@@ -26,7 +26,7 @@ func TestRunningFirmware(t *testing.T) {
 		requireState(t, instanceDir, "offline")
 	})
 
-	t.Run("firmware file must exist in folder indicated inside /sys/module/firmware_class/parameters/path", func(t *testing.T) {
+	t.Run("firmware file must exist in folder indicated inside <fake-root>/sys/module/firmware_class/parameters/path", func(t *testing.T) {
 		root := t.TempDir()
 		runSimulator(t, "--root-dir", root, "--index", "0")
 		instanceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
