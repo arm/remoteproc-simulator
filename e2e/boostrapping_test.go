@@ -1,7 +1,9 @@
 package e2e
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,7 +52,8 @@ func TestBootstrapping(t *testing.T) {
 
 		runSimulator(t, "--root-dir", root, "--index", "99")
 
-		firmwareDir := filepath.Join(root, "lib", "firmware")
-		assert.DirExists(t, firmwareDir)
+		firmwareDir, err := os.ReadFile(filepath.Join(root, "sys", "module", "firmware_class", "parameters", "path"))
+		assert.NoError(t, err)
+		assert.DirExists(t, strings.TrimSpace(string(firmwareDir)))
 	})
 }

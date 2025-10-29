@@ -88,7 +88,7 @@ Example usage:
 
 	rootCmd.Flags().UintVar(&index, "index", 0, "is the N in /sys/class/remoteproc/remoteprocN/.../ (default 0)")
 	rootCmd.Flags().StringVar(&name, "name", "dsp0", "remote processor name written to /sys/class/remoteproc/.../name")
-	rootCmd.Flags().StringVar(&rootDir, "root-dir", "", "location where /sys and /lib will be created")
+	rootCmd.Flags().StringVar(&rootDir, "root-dir", "", "location where /sys will be created")
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "show version information")
 
 	if err := rootCmd.Execute(); err != nil {

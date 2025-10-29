@@ -7,17 +7,19 @@ import (
 )
 
 type FileSystemManager struct {
-	instanceDir string
-	firmwareDir string
-	createdDirs []string
+	instanceDir         string
+	firmwareDirPathFile string
+	firmwareDir         string
+	createdDirs         []string
 }
 
 func NewFileSystemManager(rootDir string, index uint) *FileSystemManager {
 	instanceName := fmt.Sprintf("remoteproc%d", index)
 	return &FileSystemManager{
-		instanceDir: filepath.Join(rootDir, "sys", "class", "remoteproc", instanceName),
-		firmwareDir: filepath.Join(rootDir, "lib", "firmware"),
-		createdDirs: []string{},
+		instanceDir:         filepath.Join(rootDir, "sys", "class", "remoteproc", instanceName),
+		firmwareDirPathFile: filepath.Join(rootDir, "sys", "module", "firmware_class", "parameters", "path"),
+		firmwareDir:         filepath.Join(rootDir, "firmware"),
+		createdDirs:         []string{},
 	}
 }
 
@@ -30,13 +32,27 @@ func (fs *FileSystemManager) BootstrapDirectories() error {
 		fs.createdDirs = append(fs.createdDirs, createdInstancePath)
 	}
 
-	createdFirmwarePath, err := mkdirAll(fs.firmwareDir, 0755)
+	createdFirmwareDirSpecPath, err := mkfile(fs.firmwareDirPathFile, 0755)
+	if err != nil {
+		fs.Cleanup()
+		return fmt.Errorf("failed to create firmware path directory: %w", err)
+	}
+	if createdFirmwareDirSpecPath != "" {
+		fs.createdDirs = append(fs.createdDirs, createdFirmwareDirSpecPath)
+	}
+
+	if err := os.WriteFile(fs.firmwareDirPathFile, []byte(fs.firmwareDir), 0644); err != nil {
+		fs.Cleanup()
+		return fmt.Errorf("failed to write firmware path file: %w", err)
+	}
+
+	createdFirmwareDir, err := mkdirAll(fs.firmwareDir, 0755)
 	if err != nil {
 		fs.Cleanup()
 		return fmt.Errorf("failed to create firmware directory: %w", err)
 	}
-	if createdFirmwarePath != "" {
-		fs.createdDirs = append(fs.createdDirs, createdFirmwarePath)
+	if createdFirmwareDir != "" {
+		fs.createdDirs = append(fs.createdDirs, createdFirmwareDir)
 	}
 
 	return nil
@@ -73,6 +89,24 @@ func (fs *FileSystemManager) Cleanup() error {
 	}
 	fs.createdDirs = []string{}
 	return nil
+}
+
+func mkfile(path string, perm os.FileMode) (string, error) {
+	dir, err := mkdirAll(filepath.Dir(path), perm)
+	if err != nil {
+		return "", err
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, perm)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	if dir == "" {
+		return path, nil
+	} else {
+		return dir, nil
+	}
+
 }
 
 func mkdirAll(path string, perm os.FileMode) (string, error) {
