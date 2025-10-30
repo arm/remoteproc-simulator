@@ -163,8 +163,8 @@ func (r *Remoteproc) handleStateChange(value string) {
 			return
 		}
 
-		if !r.fs.FirmwareExists(r.firmware) {
-			log.Printf("Cannot start: firmware file not found in %s directory", r.fs.FirmwareDir())
+		if err := r.fs.CheckFirmwareExists(r.firmware); err != nil {
+			log.Printf("Cannot start: %s", err)
 			r.setState(r.state)
 			return
 		}
