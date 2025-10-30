@@ -7,19 +7,19 @@ import (
 )
 
 type FileSystemManager struct {
-	instanceDir         string
-	firmwareDirPathFile string
-	firmwareDir         string
-	createdDirs         []string
+	instanceDir            string
+	firmwareSearchPathFile string
+	firmwareDir            string
+	createdDirs            []string
 }
 
 func NewFileSystemManager(rootDir string, index uint) *FileSystemManager {
 	instanceName := fmt.Sprintf("remoteproc%d", index)
 	return &FileSystemManager{
-		instanceDir:         filepath.Join(rootDir, "sys", "class", "remoteproc", instanceName),
-		firmwareDirPathFile: filepath.Join(rootDir, "sys", "module", "firmware_class", "parameters", "path"),
-		firmwareDir:         filepath.Join(rootDir, "firmware"),
-		createdDirs:         []string{},
+		instanceDir:            filepath.Join(rootDir, "sys", "class", "remoteproc", instanceName),
+		firmwareSearchPathFile: filepath.Join(rootDir, "sys", "module", "firmware_class", "parameters", "path"),
+		firmwareDir:            filepath.Join(rootDir, "firmware"),
+		createdDirs:            []string{},
 	}
 }
 
@@ -32,7 +32,7 @@ func (fs *FileSystemManager) BootstrapDirectories() error {
 		fs.createdDirs = append(fs.createdDirs, createdInstancePath)
 	}
 
-	createdFirmwareDirSpecPath, err := mkfile(fs.firmwareDirPathFile, 0755)
+	createdFirmwareDirSpecPath, err := mkfile(fs.firmwareSearchPathFile, 0755)
 	if err != nil {
 		fs.Cleanup()
 		return fmt.Errorf("failed to create firmware path directory: %w", err)
@@ -41,7 +41,7 @@ func (fs *FileSystemManager) BootstrapDirectories() error {
 		fs.createdDirs = append(fs.createdDirs, createdFirmwareDirSpecPath)
 	}
 
-	if err := os.WriteFile(fs.firmwareDirPathFile, []byte(fs.firmwareDir), 0644); err != nil {
+	if err := os.WriteFile(fs.firmwareSearchPathFile, []byte(fs.firmwareDir), 0644); err != nil {
 		fs.Cleanup()
 		return fmt.Errorf("failed to write firmware path file: %w", err)
 	}
