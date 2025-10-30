@@ -14,7 +14,6 @@ import (
 var (
 	version = "dev"
 	commit  = "none"
-	date    = "unknown"
 )
 
 func main() {
@@ -44,7 +43,7 @@ Example usage:
   echo stop > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
   cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/state  # Shows 'offline'
 	`,
-		Version: fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date),
+		Version: fmt.Sprintf("%s (commit: %s)", version, commit),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !cmd.Flags().Changed("root-dir") {
 				tmpDir, err := os.MkdirTemp("", "remoteproc-simulator-*")
