@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type FileSystemManager struct {
 	instanceDir            string
 	firmwareSearchPathFile string
-	firmwareDir            string
+	defaultFirmwareDir     string
 	createdDirs            []string
 }
 
@@ -18,7 +19,7 @@ func NewFileSystemManager(rootDir string, index uint) *FileSystemManager {
 	return &FileSystemManager{
 		instanceDir:            filepath.Join(rootDir, "sys", "class", "remoteproc", instanceName),
 		firmwareSearchPathFile: filepath.Join(rootDir, "sys", "module", "firmware_class", "parameters", "path"),
-		firmwareDir:            filepath.Join(rootDir, "firmware"),
+		defaultFirmwareDir:     filepath.Join(rootDir, "lib", "firmware"),
 		createdDirs:            []string{},
 	}
 }
@@ -32,27 +33,26 @@ func (fs *FileSystemManager) BootstrapDirectories() error {
 		fs.createdDirs = append(fs.createdDirs, createdInstancePath)
 	}
 
-	createdFirmwareDirSpecPath, err := mkfile(fs.firmwareSearchPathFile, 0755)
+	createdParametersDir, err := mkdirAll(filepath.Dir(fs.firmwareSearchPathFile), 0755)
 	if err != nil {
 		fs.Cleanup()
-		return fmt.Errorf("failed to create firmware path directory: %w", err)
+		return fmt.Errorf("failed to create parameters directory: %w", err)
 	}
-	if createdFirmwareDirSpecPath != "" {
-		fs.createdDirs = append(fs.createdDirs, createdFirmwareDirSpecPath)
+	if createdParametersDir != "" {
+		fs.createdDirs = append(fs.createdDirs, createdParametersDir)
 	}
-
-	if err := os.WriteFile(fs.firmwareSearchPathFile, []byte(fs.firmwareDir), 0644); err != nil {
+	if err := os.WriteFile(fs.firmwareSearchPathFile, []byte(""), 0644); err != nil {
 		fs.Cleanup()
-		return fmt.Errorf("failed to write firmware path file: %w", err)
+		return fmt.Errorf("failed to create empty fimware search path file; %w", err)
 	}
 
-	createdFirmwareDir, err := mkdirAll(fs.firmwareDir, 0755)
+	createdDefaultFirmwareDir, err := mkdirAll(fs.defaultFirmwareDir, 0755)
 	if err != nil {
 		fs.Cleanup()
 		return fmt.Errorf("failed to create firmware directory: %w", err)
 	}
-	if createdFirmwareDir != "" {
-		fs.createdDirs = append(fs.createdDirs, createdFirmwareDir)
+	if createdDefaultFirmwareDir != "" {
+		fs.createdDirs = append(fs.createdDirs, createdDefaultFirmwareDir)
 	}
 
 	return nil
@@ -68,7 +68,29 @@ func (fs *FileSystemManager) WriteInstanceFile(filename, content string) error {
 }
 
 func (fs *FileSystemManager) FirmwareExists(firmwareName string) bool {
-	path := filepath.Join(fs.firmwareDir, firmwareName)
+	return fs.firmwareExistsInCustomPath(firmwareName) || fs.firmwareExistsInDefaultPath(firmwareName)
+}
+
+func (fs *FileSystemManager) firmwareExistsInCustomPath(firmwareName string) bool {
+	customFirmwarePath := fs.customFirmwarePath()
+	if customFirmwarePath == "" {
+		return false
+	}
+	path := filepath.Join(customFirmwarePath, firmwareName)
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
+}
+
+func (fs *FileSystemManager) customFirmwarePath() string {
+	customFirmwareLoadPath, err := os.ReadFile(fs.firmwareSearchPathFile)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(customFirmwareLoadPath))
+}
+
+func (fs *FileSystemManager) firmwareExistsInDefaultPath(firmwareName string) bool {
+	path := filepath.Join(fs.defaultFirmwareDir, firmwareName)
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
 }
@@ -78,7 +100,7 @@ func (fs *FileSystemManager) InstanceDir() string {
 }
 
 func (fs *FileSystemManager) FirmwareDir() string {
-	return fs.firmwareDir
+	return fs.defaultFirmwareDir
 }
 
 func (fs *FileSystemManager) Cleanup() error {
@@ -89,24 +111,6 @@ func (fs *FileSystemManager) Cleanup() error {
 	}
 	fs.createdDirs = []string{}
 	return nil
-}
-
-func mkfile(path string, perm os.FileMode) (string, error) {
-	dir, err := mkdirAll(filepath.Dir(path), perm)
-	if err != nil {
-		return "", err
-	}
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, perm)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	if dir == "" {
-		return path, nil
-	} else {
-		return dir, nil
-	}
-
 }
 
 func mkdirAll(path string, perm os.FileMode) (string, error) {

@@ -45,6 +45,15 @@ func TestBootstrapping(t *testing.T) {
 		assert.DirExists(t, instanceDir)
 	})
 
+	t.Run("default firmware directory is created", func(t *testing.T) {
+		root := t.TempDir()
+
+		runSimulator(t, "--root-dir", root, "--index", "99")
+
+		pathFile := filepath.Join(root, "lib", "firmware")
+		assert.DirExists(t, pathFile)
+	})
+
 	t.Run("file used to customize firmware search path is created", func(t *testing.T) {
 		root := t.TempDir()
 
