@@ -26,10 +26,10 @@ Control the simulated remote processor via sysfs:
 
 ```bash
 # Prepare firmware file
-touch /tmp/fake-root/lib/firmware/hello_world.elf
+touch /tmp/fake-root/lib/firmware/hello-world.elf
 
 # Set firmware
-echo hello_world.elf > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
+echo hello-world.elf > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
 
 # Start the remote processor
 echo start > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
@@ -45,6 +45,22 @@ Inspect remote processor name:
 
 ```bash
 cat /tmp/fake-root/sys/class/remoteproc/remoteproc0/name
+```
+
+Specify custom firmware load path:
+
+```bash
+# Set custom load path
+echo /tmp > /tmp/fake-root/sys/module/firmware_class/parameters/path
+
+# Prepare firmware file in custom path
+touch /tmp/hi-universe.elf
+
+# Set firmware
+echo hi-universe.elf > /tmp/fake-root/sys/class/remoteproc/remoteproc0/firmware
+
+# Start the remote processor
+echo start > /tmp/fake-root/sys/class/remoteproc/remoteproc0/state
 ```
 
 ## Installation from Releases

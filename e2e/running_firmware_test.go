@@ -3,7 +3,6 @@ package e2e
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +14,7 @@ func TestRunningFirmware(t *testing.T) {
 		runSimulator(t, "--root-dir", root, "--index", "3")
 		instanceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc3")
 
-		createFirmwareFile(t, root, "some-firmware.elf")
+		createFirmwareFile(t, filepath.Join(root, "lib", "firmware", "some-firmware.elf"))
 		loadFirmware(t, instanceDir, "some-firmware.elf")
 		setRemoteprocState(t, instanceDir, "start")
 
@@ -24,6 +23,46 @@ func TestRunningFirmware(t *testing.T) {
 		setRemoteprocState(t, instanceDir, "stop")
 
 		requireState(t, instanceDir, "offline")
+	})
+
+	t.Run("firmware file must exist in order to start remoteproc successfully", func(t *testing.T) {
+		t.Run("in default firmware directory - /lib/firmware", func(t *testing.T) {
+			root := t.TempDir()
+			runSimulator(t, "--root-dir", root, "--index", "0")
+			instanceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
+
+			createFirmwareFile(t, filepath.Join(root, "lib", "firmware", "some-firmware.elf"))
+			loadFirmware(t, instanceDir, "some-firmware.elf")
+			setRemoteprocState(t, instanceDir, "start")
+
+			requireState(t, instanceDir, "running")
+		})
+
+		t.Run("in custom firmware directory, specified in /sys/module/firmware_class/parameters/path", func(t *testing.T) {
+			root := t.TempDir()
+			runSimulator(t, "--root-dir", root, "--index", "0")
+			instanceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
+			customFirmwarePath := t.TempDir()
+			firmwareSearchPathFile := filepath.Join(root, "sys", "module", "firmware_class", "parameters", "path")
+
+			require.NoError(t, writeFile(firmwareSearchPathFile, customFirmwarePath))
+			createFirmwareFile(t, filepath.Join(customFirmwarePath, "some-firmware.elf"))
+			loadFirmware(t, instanceDir, "some-firmware.elf")
+			setRemoteprocState(t, instanceDir, "start")
+
+			requireState(t, instanceDir, "running")
+		})
+
+		t.Run("when firmware file doesn't exist, remoteproc fails to start", func(t *testing.T) {
+			root := t.TempDir()
+			runSimulator(t, "--root-dir", root, "--index", "0")
+			instanceDir := filepath.Join(root, "sys", "class", "remoteproc", "remoteproc0")
+
+			loadFirmware(t, instanceDir, "some-firmware.elf")
+			setRemoteprocState(t, instanceDir, "start")
+
+			requireState(t, instanceDir, "offline")
+		})
 	})
 
 	t.Run("firmware file must exist in folder indicated inside <fake-root>/sys/module/firmware_class/parameters/path", func(t *testing.T) {
@@ -38,13 +77,8 @@ func TestRunningFirmware(t *testing.T) {
 	})
 }
 
-func createFirmwareFile(t *testing.T, root, firmwareName string) {
-	firmwareDirPath, err := os.ReadFile(filepath.Join(root, "sys", "module", "firmware_class", "parameters", "path"))
-	require.NoError(t, err)
-	firmwareDirPathStr := strings.TrimSpace(string(firmwareDirPath))
-	err = os.MkdirAll(firmwareDirPathStr, 0755)
-	require.NoError(t, err)
-	firmwarePath := filepath.Join(firmwareDirPathStr, firmwareName)
+func createFirmwareFile(t *testing.T, pathToFirmwareFile string) {
+	firmwarePath := filepath.Join(pathToFirmwareFile)
 	require.NoError(t, writeFile(firmwarePath, ""))
 }
 

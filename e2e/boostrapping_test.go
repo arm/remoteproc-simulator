@@ -1,9 +1,7 @@
 package e2e
 
 import (
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,13 +45,21 @@ func TestBootstrapping(t *testing.T) {
 		assert.DirExists(t, instanceDir)
 	})
 
-	t.Run("firmware directory is created", func(t *testing.T) {
+	t.Run("default firmware directory is created", func(t *testing.T) {
 		root := t.TempDir()
 
 		runSimulator(t, "--root-dir", root, "--index", "99")
 
-		firmwareDir, err := os.ReadFile(filepath.Join(root, "sys", "module", "firmware_class", "parameters", "path"))
-		assert.NoError(t, err)
-		assert.DirExists(t, strings.TrimSpace(string(firmwareDir)))
+		pathFile := filepath.Join(root, "lib", "firmware")
+		assert.DirExists(t, pathFile)
+	})
+
+	t.Run("file used to customize firmware search path is created", func(t *testing.T) {
+		root := t.TempDir()
+
+		runSimulator(t, "--root-dir", root, "--index", "99")
+
+		pathFile := filepath.Join(root, "sys", "module", "firmware_class", "parameters", "path")
+		assert.FileExists(t, pathFile)
 	})
 }
