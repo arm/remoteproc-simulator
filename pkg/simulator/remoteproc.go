@@ -129,6 +129,7 @@ func (r *Remoteproc) loop() {
 			log.Printf("Remoteproc shutting down")
 			return
 		case event, ok := <-r.watcher.Changes():
+			log.Printf("Remoteproc detected change: %s = %s", event.Filename, event.Value)
 			if !ok {
 				return
 			}
